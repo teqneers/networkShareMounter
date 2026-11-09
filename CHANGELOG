@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### What's new
+- A share can now be mounted at any folder of the user, e.g. `~/Shares/docs`, instead of only inside the
+  common mount location. Set the full path in the new "Mount Path" field of the share dialog or with the new
+  MDM key `localMountPoint` in `managedNetworkShares`. The folder must belong to the user and be empty; missing
+  folders are created. Without a mount path shares are mounted as before
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new

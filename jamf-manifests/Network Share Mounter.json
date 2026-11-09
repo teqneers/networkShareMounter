@@ -101,6 +101,11 @@
                             "true",
                             "false"
                         ]
+                    },
+                    "localMountPoint": {
+                        "title": "Local mount point (Optional)",
+                        "description": "Optional full local path where this share is mounted, e.g. ~/Shares/docs. Overrides location and mountPoint for this share; mountPoint still names the share in the menu. Must start with / or ~/ and must not be inside /Volumes. %USERNAME% is replaced. The directory must be owned by the user and empty; missing directories are created if the user owns the nearest existing parent. Shares with a local mount point do not appear in the location folder opened by 'Show mounted shares'.",
+                        "type": "string"
                     }
                 }
             }
