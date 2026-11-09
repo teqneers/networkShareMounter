@@ -13,7 +13,7 @@
 	<key>pfm_format_version</key>
 	<integer>1</integer>
 	<key>pfm_last_modified</key>
-	<date>2026-10-29T12:00:00Z</date>
+	<date>2026-11-10T12:00:00Z</date>
 	<key>pfm_platforms</key>
 	<array>
 		<string>macOS</string>
@@ -258,6 +258,28 @@ A profile can consist of payloads with different version numbers. For example, c
 							</array>
 							<key>pfm_title</key>
 							<string>Automatically mount</string>
+							<key>pfm_type</key>
+							<string>string</string>
+						</dict>
+						<dict>
+							<key>pfm_default</key>
+							<string>false</string>
+							<key>pfm_description</key>
+							<string>true: the share is mounted with MNT_DONTBROWSE and is not shown in Finder's sidebar or on the desktop (like the autofs option nobrowse). It stays accessible at its mount path. false (default): the share is shown in Finder as usual.</string>
+							<key>pfm_name</key>
+							<string>hideFromFinder</string>
+							<key>pfm_range_list</key>
+							<array>
+								<string>true</string>
+								<string>false</string>
+							</array>
+							<key>pfm_range_list_titles</key>
+							<array>
+								<string>Yes</string>
+								<string>No</string>
+							</array>
+							<key>pfm_title</key>
+							<string>Hide in Finder sidebar</string>
 							<key>pfm_type</key>
 							<string>string</string>
 						</dict>

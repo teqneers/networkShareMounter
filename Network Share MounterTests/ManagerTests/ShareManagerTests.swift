@@ -297,6 +297,41 @@ final class ShareManagerTests: XCTestCase {
         XCTAssertEqual(resultShare?.networkShare, "invalid://url", "Should keep the invalid URL")
     }
     
+    /// Test: hideFromFinder is off unless the share configuration sets it to "true"
+    func testHideFromFinderDefaultsToFalse() async throws {
+        // Given
+        let shareConfig: [String: String] = [
+            Defaults.networkShare: testShare1,
+            Defaults.authType: AuthType.krb.rawValue
+        ]
+
+        // When
+        let mdmShare = await sut.getMDMShareConfig(forShare: shareConfig)
+        let userShare = await sut.getUserShareConfigs(forShare: shareConfig)
+
+        // Then
+        XCTAssertEqual(mdmShare?.hideFromFinder, false, "MDM share should be visible in Finder by default")
+        XCTAssertEqual(userShare?.hideFromFinder, false, "User share should be visible in Finder by default")
+    }
+
+    /// Test: hideFromFinder is read from MDM and user share configurations
+    func testHideFromFinderIsReadFromShareConfig() async throws {
+        // Given
+        let shareConfig: [String: String] = [
+            Defaults.networkShare: testShare1,
+            Defaults.authType: AuthType.krb.rawValue,
+            Defaults.hideFromFinder: "true"
+        ]
+
+        // When
+        let mdmShare = await sut.getMDMShareConfig(forShare: shareConfig)
+        let userShare = await sut.getUserShareConfigs(forShare: shareConfig)
+
+        // Then
+        XCTAssertEqual(mdmShare?.hideFromFinder, true, "MDM share should be hidden from Finder")
+        XCTAssertEqual(userShare?.hideFromFinder, true, "User share should be hidden from Finder")
+    }
+
     // MARK: - Tests: Other Functionality
     
     /// Test: HasShares returns correct value

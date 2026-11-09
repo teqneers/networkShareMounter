@@ -101,6 +101,22 @@
                             "true",
                             "false"
                         ]
+                    },
+                    "hideFromFinder": {
+                        "title": "Hide in Finder sidebar (Optional)",
+                        "description": "Per-share flag. When set to 'true', the share is mounted with MNT_DONTBROWSE and is not shown in Finder's sidebar or on the desktop (like the autofs option nobrowse). It stays accessible at its mount path. Default: 'false'.",
+                        "type": "string",
+                        "default": "false",
+                        "options": {
+                            "enum_titles": [
+                                "true (hidden)",
+                                "false (shown in Finder)"
+                            ]
+                        },
+                        "enum": [
+                            "true",
+                            "false"
+                        ]
                     }
                 }
             }

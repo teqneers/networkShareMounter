@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### What's new
+- Shares can be hidden from Finder's sidebar and desktop with the new per-share option "Hide in Finder sidebar"
+  (MDM key `hideFromFinder` in `managedNetworkShares`, set to `true`). The share is mounted with
+  `MNT_DONTBROWSE`, like the autofs option `nobrowse`, and stays accessible at its mount path. Without the key
+  shares are shown in Finder as before
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new
