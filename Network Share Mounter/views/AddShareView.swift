@@ -20,9 +20,11 @@ struct AddShareView: View {
     @State private var mountPointName: String = ""
     @State private var selectedProfileID: String? = nil // Profile ID or nil for "None"
     @State private var autoMount: Bool = true
+    @State private var localMountPoint: String = "" // e.g., ~/Shares/docs, empty = default location
 
     // Validation states
     @State private var mountPointError: String? = nil
+    @State private var localMountPointError: String? = nil
     @State private var isValidatingMountPoint = false
 
     // Focus tracking for auto-fill
@@ -107,7 +109,7 @@ struct AddShareView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(networkShare.isEmpty || mountPointName.isEmpty || mountPointError != nil)
+                .disabled(networkShare.isEmpty || mountPointName.isEmpty || mountPointError != nil || localMountPointError != nil)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(20)
@@ -153,6 +155,26 @@ struct AddShareView: View {
                         }
 
                     if let error = mountPointError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+
+            HStack {
+                Text("Mount Path:")
+                    .frame(width: 100, alignment: .trailing)
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Optional, e.g. ~/Shares/docs", text: $localMountPoint)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .disabled(isEditing && (existingShare?.managed == true))
+                        .onChange(of: localMountPoint) { newValue in
+                            validateLocalMountPoint(newValue)
+                        }
+
+                    if let error = localMountPointError {
                         Text(error)
                             .font(.caption)
                             .foregroundColor(.red)
@@ -252,6 +274,7 @@ struct AddShareView: View {
         networkShare = share.networkShare
         mountPointName = share.effectiveMountPoint
         autoMount = share.autoMount
+        localMountPoint = share.localMountPoint ?? ""
 
         // The assigned profile is what mounting uses; associations are only a fallback
         if let profileID = share.authProfileID, profileManager.getProfile(by: profileID) != nil {
@@ -297,6 +320,22 @@ struct AddShareView: View {
         }
     }
     
+    /// Validates the optional full mount path
+    private func validateLocalMountPoint(_ path: String) {
+        let trimmed = path.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty || Share.isValidLocalMountPoint(trimmed) {
+            localMountPointError = nil
+        } else {
+            localMountPointError = String(localized: "⚠️ Use a full path like ~/Shares/docs, not in /Volumes")
+        }
+    }
+
+    /// Returns the entered mount path, or nil if the field is empty
+    private var localMountPointValue: String? {
+        let trimmed = localMountPoint.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     /// Finds which profile (if any) is associated with the given share
     private func findAssociatedProfile(for share: Share) -> String? {
         for profile in profileManager.profiles {
@@ -336,7 +375,8 @@ struct AddShareView: View {
             mountPoint: mountPoint,
             managed: false,
             authProfileID: (selectedProfileID ?? "").isEmpty ? nil : selectedProfileID,
-            autoMount: autoMount
+            autoMount: autoMount,
+            localMountPoint: localMountPointValue
         )
         
         do {
@@ -382,10 +422,14 @@ struct AddShareView: View {
             var updatedShare = originalShare
             let oldShareURL = originalShare.networkShare
             let oldMountPoint = originalShare.effectiveMountPoint
+            let oldLocalMountPoint = originalShare.localMountPoint
 
             updatedShare.networkShare = networkShare
             updatedShare.mountPoint = mountPointName.isEmpty ? nil : mountPointName
             updatedShare.autoMount = autoMount
+            if !originalShare.managed {
+                updatedShare.localMountPoint = localMountPointValue
+            }
             updatedShare.authProfileID = selectedProfileID
             if !originalShare.managed {
                 updatedShare.authType = authType(forProfileID: selectedProfileID)
@@ -396,6 +440,7 @@ struct AddShareView: View {
 
             // Check if URL or mount point changed and share is currently mounted
             let locationChanged = oldShareURL != updatedShare.networkShare || oldMountPoint != updatedShare.effectiveMountPoint
+                || oldLocalMountPoint != updatedShare.localMountPoint
             let needsRemount = locationChanged && originalShare.mountStatus == .mounted
 
             // Unmount if necessary before updating

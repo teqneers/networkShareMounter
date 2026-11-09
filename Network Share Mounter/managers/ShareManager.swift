@@ -472,7 +472,8 @@ actor ShareManager {
             managed: false,
             shareDisplayName: shareElement[Defaults.shareDisplayNameKey]?.trim(),
             authProfileID: shareElement[Defaults.authProfileID]?.trim(),
-            autoMount: autoMount
+            autoMount: autoMount,
+            localMountPoint: shareElement[Defaults.localMountPoint]?.trim()
         )
         return(newShare)
     }
@@ -759,6 +760,9 @@ actor ShareManager {
                 }
                 if !share.autoMount {
                     shareConfig[Defaults.autoMount] = "false"
+                }
+                if let localMountPoint = share.localMountPoint {
+                    shareConfig[Defaults.localMountPoint] = localMountPoint
                 }
                 userDefaultsConfigs.append(shareConfig)
             }

@@ -243,6 +243,86 @@
         }
       }
     },
+    "Mount Path:" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einhängepfad:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mount Path:"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruta de montaje:"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Point de montage :"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Percorso di montaggio:"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koppelpad:"
+          }
+        }
+      }
+    },
+    "Optional, e.g. ~/Shares/docs" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional, z. B. ~/Shares/docs"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional, e.g. ~/Shares/docs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional, p. ej. ~/Shares/docs"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif, p. ex. ~/Shares/docs"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facoltativo, ad es. ~/Shares/docs"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optioneel, bijv. ~/Shares/docs"
+          }
+        }
+      }
+    },
     "• Authentication agents (NetAuthSysAgent, NetAuthAgent)" : {
       "comment" : "Diagnostic info popover: debug log filter item",
       "extractionState" : "manual",
@@ -552,6 +632,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "⚠️ Profieltoewijzing vereist..."
+          }
+        }
+      }
+    },
+    "⚠️ Use a full path like ~/Shares/docs, not in /Volumes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Vollständigen Pfad wie ~/Shares/docs verwenden, nicht in /Volumes"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Use a full path like ~/Shares/docs, not in /Volumes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Use una ruta completa como ~/Shares/docs, no en /Volumes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Utilisez un chemin complet comme ~/Shares/docs, pas dans /Volumes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Usa un percorso completo come ~/Shares/docs, non in /Volumes"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Gebruik een volledig pad zoals ~/Shares/docs, niet in /Volumes"
           }
         }
       }
