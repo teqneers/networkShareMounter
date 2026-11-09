@@ -404,6 +404,8 @@ actor ShareManager {
             Logger.shareManager.info("⏸️ Share \(shareRectified, privacy: .public) has autoMount=false — will not mount automatically")
         }
 
+        let hideFromFinder = shareElement[Defaults.hideFromFinder]?.lowercased() == "true"
+
         // Create and return new Share object with configured parameters
         let newShare = Share.createShare(networkShare: shareRectified,
                                          authType: shareAuthType,
@@ -413,7 +415,8 @@ actor ShareManager {
                                          mountPoint: shareElement[Defaults.mountPoint]?.trim(),
                                          managed: true,
                                          externalKerberosManagement: externalKerberos,
-                                         autoMount: autoMount)
+                                         autoMount: autoMount,
+                                         hideFromFinder: hideFromFinder)
         return(newShare)
     }
     

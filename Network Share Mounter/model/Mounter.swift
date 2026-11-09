@@ -1256,6 +1256,15 @@ class Mounter: ObservableObject {
             Logger.mounter.debug("👤 Using guest authentication options for \(share.networkShare, privacy: .public)")
         }
         
+        // Hide the mount from Finder's sidebar and "Computer" view (MNT_DONTBROWSE, like autofs "nobrowse").
+        // Work on a copy: Defaults.mountOptions is a shared mutable dictionary.
+        if share.hideFromFinder {
+            let hiddenMountOptions = NSMutableDictionary(dictionary: mountOptions)
+            hiddenMountOptions[kNetFSMountFlagsKey as String] = MNT_DONTBROWSE
+            mountOptions = hiddenMountOptions as CFMutableDictionary
+            Logger.mounter.debug("🙈 Mounting \(share.networkShare, privacy: .public) with MNT_DONTBROWSE (hidden from Finder)")
+        }
+
         return (mountOptions, openOptions, realMountPoint)
     }
     

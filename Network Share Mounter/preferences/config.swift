@@ -188,6 +188,10 @@ struct Defaults {
     /// The user can still mount it manually by clicking the menu item. Default: true.
     static let autoMount = "autoMount"
     
+    /// Per-share flag: when true the share is mounted with MNT_DONTBROWSE, so it does not
+    /// appear in Finder's sidebar or "Computer" view (like autofs "nobrowse"). Default: false.
+    static let hideFromFinder = "hideFromFinder"
+
     /// Legacy key for user-defined shares
     static let customSharesKey = "customNetworkShares"
     

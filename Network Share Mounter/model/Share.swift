@@ -42,6 +42,9 @@ struct Share: Identifiable {
     /// When false the share appears in the menu but is never mounted automatically.
     /// The user can mount it on demand by clicking the menu item. Default: true.
     var autoMount: Bool = true
+    /// When true the share is mounted with MNT_DONTBROWSE and does not appear in Finder's
+    /// sidebar or "Computer" view. The mount itself stays accessible by its path. Default: false.
+    var hideFromFinder: Bool = false
     /// Unique identifier (random UUID). Remains stable for the life-time of the Share instance and
     /// is stored persistently when needed (e.g. associated profiles).
     var id: String = UUID().uuidString
@@ -225,7 +228,8 @@ struct Share: Identifiable {
         shareDisplayName: String? = nil,
         authProfileID: String? = nil,
         externalKerberosManagement: Bool = false,
-        autoMount: Bool = true
+        autoMount: Bool = true,
+        hideFromFinder: Bool = false
     ) -> Share {
         // Sanitize mountPoint before creating the share
         let sanitizedMountPoint = sanitizeMountPoint(mountPoint)
@@ -243,6 +247,7 @@ struct Share: Identifiable {
             authProfileID: authProfileID,
             externalKerberosManagement: externalKerberosManagement,
             autoMount: autoMount,
+            hideFromFinder: hideFromFinder,
             id: UUID().uuidString
         )
     }
