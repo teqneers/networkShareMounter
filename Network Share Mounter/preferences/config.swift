@@ -188,6 +188,10 @@ struct Defaults {
     /// The user can still mount it manually by clicking the menu item. Default: true.
     static let autoMount = "autoMount"
     
+    /// Optional full local path for a specific share (e.g. "~/Shares/docs").
+    /// Overrides `location` and `mountPoint` for the mount directory of this share.
+    static let localMountPoint = "localMountPoint"
+
     /// Legacy key for user-defined shares
     static let customSharesKey = "customNetworkShares"
     

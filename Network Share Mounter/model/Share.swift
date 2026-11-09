@@ -42,6 +42,10 @@ struct Share: Identifiable {
     /// When false the share appears in the menu but is never mounted automatically.
     /// The user can mount it on demand by clicking the menu item. Default: true.
     var autoMount: Bool = true
+    /// Optional full local path where the share is mounted, e.g. "~/Shares/docs" or "/Users/%USERNAME%/docs".
+    /// Overrides the global `location` and `mountPoint` for the mount directory. `mountPoint` still
+    /// names the share in the menu. Default: nil (mount at `<location>/<mountPoint>`).
+    var localMountPoint: String?
     /// Unique identifier (random UUID). Remains stable for the life-time of the Share instance and
     /// is stored persistently when needed (e.g. associated profiles).
     var id: String = UUID().uuidString
@@ -185,6 +189,55 @@ struct Share: Identifiable {
         }
     }
     
+    /// Validates a full local mount path
+    ///
+    /// A local mount point must be an absolute path or start with "~/". It must not contain
+    /// "." or ".." components and must not be "/", the home directory, or inside /Volumes
+    /// (mounts in /Volumes are handled by the system, use `location` for those).
+    /// Ownership of the directory is checked at mount time.
+    ///
+    /// Valid:   "~/Shares/docs", "/Users/%USERNAME%/docs", "/Users/test/mnt/data"
+    /// Invalid: "docs", "~", "/", "/Volumes/docs", "~/../other", "" (empty)
+    ///
+    /// - Parameter localMountPoint: The path to validate
+    /// - Returns: true if valid or nil, false otherwise
+    static func isValidLocalMountPoint(_ localMountPoint: String?) -> Bool {
+        guard let localMountPoint = localMountPoint else {
+            return true
+        }
+        guard localMountPoint.hasPrefix("/") || localMountPoint.hasPrefix("~/") else {
+            return false
+        }
+        let components = localMountPoint.split(separator: "/").map(String.init)
+        if components.contains(".") || components.contains("..") {
+            return false
+        }
+        let expanded = expandLocalMountPoint(localMountPoint)
+        let home = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.path
+        if expanded == "/" || expanded == home || expanded == "/Volumes" || expanded.hasPrefix("/Volumes/") {
+            return false
+        }
+        return true
+    }
+
+    /// Expands a leading "~" to the home directory and standardizes the path (no trailing "/")
+    static func expandLocalMountPoint(_ localMountPoint: String) -> String {
+        var path = localMountPoint
+        if path.hasPrefix("~/") {
+            path = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(String(path.dropFirst(2))).path
+        }
+        return URL(fileURLWithPath: path).standardizedFileURL.path
+    }
+
+    /// Returns the full local mount path with "~" expanded and %USERNAME% replaced by `username`,
+    /// or nil if no local mount point is set.
+    func resolvedLocalMountPoint(username: String) -> String? {
+        guard let localMountPoint = localMountPoint, !localMountPoint.isEmpty else {
+            return nil
+        }
+        return Share.expandLocalMountPoint(localMountPoint.replacingOccurrences(of: "%USERNAME%", with: username))
+    }
+
     /// Update the mount point of a share
     mutating func updateActualMountPoint(to actualMountPoint: String?) {
         modify { share in
@@ -225,10 +278,21 @@ struct Share: Identifiable {
         shareDisplayName: String? = nil,
         authProfileID: String? = nil,
         externalKerberosManagement: Bool = false,
-        autoMount: Bool = true
+        autoMount: Bool = true,
+        localMountPoint: String? = nil
     ) -> Share {
         // Sanitize mountPoint before creating the share
         let sanitizedMountPoint = sanitizeMountPoint(mountPoint)
+
+        // Reject an invalid local mount point; the share then mounts at <location>/<mountPoint>
+        var validLocalMountPoint: String?
+        if let localMountPoint = localMountPoint, !localMountPoint.isEmpty {
+            if isValidLocalMountPoint(localMountPoint) {
+                validLocalMountPoint = localMountPoint
+            } else {
+                Logger.shareManager.warning("⚠️ Invalid localMountPoint value rejected: '\(localMountPoint, privacy: .public)' for share: \(networkShare, privacy: .public)")
+            }
+        }
 
         return Share(
             networkShare: networkShare,
@@ -243,6 +307,7 @@ struct Share: Identifiable {
             authProfileID: authProfileID,
             externalKerberosManagement: externalKerberosManagement,
             autoMount: autoMount,
+            localMountPoint: validLocalMountPoint,
             id: UUID().uuidString
         )
     }

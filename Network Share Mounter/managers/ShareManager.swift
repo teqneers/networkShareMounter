@@ -413,7 +413,8 @@ actor ShareManager {
                                          mountPoint: shareElement[Defaults.mountPoint]?.trim(),
                                          managed: true,
                                          externalKerberosManagement: externalKerberos,
-                                         autoMount: autoMount)
+                                         autoMount: autoMount,
+                                         localMountPoint: shareElement[Defaults.localMountPoint]?.trim())
         return(newShare)
     }
     

@@ -297,6 +297,58 @@ final class ShareManagerTests: XCTestCase {
         XCTAssertEqual(resultShare?.networkShare, "invalid://url", "Should keep the invalid URL")
     }
     
+    /// Test: localMountPoint is read from an MDM share configuration, invalid values are rejected
+    func testGetMDMShareConfigReadsLocalMountPoint() async throws {
+        // Given
+        let validConfig: [String: String] = [
+            Defaults.networkShare: testShare1,
+            Defaults.authType: AuthType.krb.rawValue,
+            Defaults.localMountPoint: "~/Shares/testshare1"
+        ]
+        let invalidConfig: [String: String] = [
+            Defaults.networkShare: testShare2,
+            Defaults.authType: AuthType.krb.rawValue,
+            Defaults.localMountPoint: "/Volumes/testshare2"
+        ]
+
+        // When
+        let validShare = await sut.getMDMShareConfig(forShare: validConfig)
+        let invalidShare = await sut.getMDMShareConfig(forShare: invalidConfig)
+
+        // Then
+        XCTAssertEqual(validShare?.localMountPoint, "~/Shares/testshare1", "Valid local mount point should be kept")
+        XCTAssertNil(invalidShare?.localMountPoint, "Local mount point inside /Volumes should be rejected")
+    }
+
+    /// Test: validation of full local mount paths
+    func testIsValidLocalMountPoint() {
+        XCTAssertTrue(Share.isValidLocalMountPoint(nil))
+        XCTAssertTrue(Share.isValidLocalMountPoint("~/Shares/docs"))
+        XCTAssertTrue(Share.isValidLocalMountPoint("/Users/test/mnt/data"))
+        XCTAssertTrue(Share.isValidLocalMountPoint("/Users/%USERNAME%/docs"))
+
+        XCTAssertFalse(Share.isValidLocalMountPoint(""), "Empty path")
+        XCTAssertFalse(Share.isValidLocalMountPoint("docs"), "Relative path")
+        XCTAssertFalse(Share.isValidLocalMountPoint("~"), "Home directory")
+        XCTAssertFalse(Share.isValidLocalMountPoint("~/"), "Home directory")
+        XCTAssertFalse(Share.isValidLocalMountPoint("/"), "Root directory")
+        XCTAssertFalse(Share.isValidLocalMountPoint("/Volumes"), "/Volumes itself")
+        XCTAssertFalse(Share.isValidLocalMountPoint("/Volumes/docs"), "Inside /Volumes")
+        XCTAssertFalse(Share.isValidLocalMountPoint("~/../other"), "Directory traversal")
+        XCTAssertFalse(Share.isValidLocalMountPoint("/Users/test/./docs"), "Dot component")
+    }
+
+    /// Test: resolving a local mount point expands "~" and replaces %USERNAME%
+    func testResolvedLocalMountPoint() {
+        let home = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.path
+        let share = Share.createShare(networkShare: testShare1, authType: .krb, mountStatus: .unmounted,
+                                      localMountPoint: "~/Shares/%USERNAME%/")
+        let plainShare = Share.createShare(networkShare: testShare1, authType: .krb, mountStatus: .unmounted)
+
+        XCTAssertEqual(share.resolvedLocalMountPoint(username: "bob"), home + "/Shares/bob")
+        XCTAssertNil(plainShare.resolvedLocalMountPoint(username: "bob"), "No local mount point set")
+    }
+
     // MARK: - Tests: Other Functionality
     
     /// Test: HasShares returns correct value
