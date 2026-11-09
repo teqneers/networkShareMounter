@@ -243,6 +243,86 @@
         }
       }
     },
+    "Hide in Finder sidebar" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Finder-Seitenleiste ausblenden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide in Finder sidebar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocultar en la barra lateral del Finder"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer dans la barre latérale du Finder"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nascondi nella barra laterale del Finder"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbergen in Finder-navigatiekolom"
+          }
+        }
+      }
+    },
+    "The share is not shown in Finder's sidebar and on the desktop, but stays accessible at its mount path." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Netzlaufwerk wird nicht in der Finder-Seitenleiste und auf dem Schreibtisch angezeigt, bleibt aber über seinen Pfad erreichbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The share is not shown in Finder's sidebar and on the desktop, but stays accessible at its mount path."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El recurso compartido no se muestra en la barra lateral del Finder ni en el escritorio, pero sigue accesible en su ruta de montaje."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le partage n'apparaît ni dans la barre latérale du Finder ni sur le bureau, mais reste accessible via son point de montage."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La condivisione non viene mostrata nella barra laterale del Finder né sulla scrivania, ma resta accessibile dal suo percorso di montaggio."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De share wordt niet getoond in de Finder-navigatiekolom en op het bureaublad, maar blijft bereikbaar via het koppelpad."
+          }
+        }
+      }
+    },
     "• Authentication agents (NetAuthSysAgent, NetAuthAgent)" : {
       "comment" : "Diagnostic info popover: debug log filter item",
       "extractionState" : "manual",

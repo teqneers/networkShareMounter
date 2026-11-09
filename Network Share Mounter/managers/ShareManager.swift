@@ -463,6 +463,7 @@ actor ShareManager {
         let mountPoint = shareElement[Defaults.mountPoint]?.trim()
 
         let autoMount = shareElement[Defaults.autoMount]?.lowercased() != "false"
+        let hideFromFinder = shareElement[Defaults.hideFromFinder]?.lowercased() == "true"
 
         let newShare = Share.createShare(
             networkShare: shareUrlString,
@@ -474,7 +475,8 @@ actor ShareManager {
             managed: false,
             shareDisplayName: shareElement[Defaults.shareDisplayNameKey]?.trim(),
             authProfileID: shareElement[Defaults.authProfileID]?.trim(),
-            autoMount: autoMount
+            autoMount: autoMount,
+            hideFromFinder: hideFromFinder
         )
         return(newShare)
     }
@@ -761,6 +763,9 @@ actor ShareManager {
                 }
                 if !share.autoMount {
                     shareConfig[Defaults.autoMount] = "false"
+                }
+                if share.hideFromFinder {
+                    shareConfig[Defaults.hideFromFinder] = "true"
                 }
                 userDefaultsConfigs.append(shareConfig)
             }

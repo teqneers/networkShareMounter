@@ -20,6 +20,7 @@ struct AddShareView: View {
     @State private var mountPointName: String = ""
     @State private var selectedProfileID: String? = nil // Profile ID or nil for "None"
     @State private var autoMount: Bool = true
+    @State private var hideFromFinder: Bool = false
 
     // Validation states
     @State private var mountPointError: String? = nil
@@ -165,6 +166,12 @@ struct AddShareView: View {
                     Text("Mount automatically")
                 }
                 .toggleStyle(.switch)
+
+                Toggle(isOn: $hideFromFinder) {
+                    Text("Hide in Finder sidebar")
+                }
+                .toggleStyle(.switch)
+                .help("The share is not shown in Finder's sidebar and on the desktop, but stays accessible at its mount path.")
             }
 
             if isEditing && (existingShare?.managed == true) {
@@ -252,6 +259,7 @@ struct AddShareView: View {
         networkShare = share.networkShare
         mountPointName = share.effectiveMountPoint
         autoMount = share.autoMount
+        hideFromFinder = share.hideFromFinder
 
         // The assigned profile is what mounting uses; associations are only a fallback
         if let profileID = share.authProfileID, profileManager.getProfile(by: profileID) != nil {
@@ -336,7 +344,8 @@ struct AddShareView: View {
             mountPoint: mountPoint,
             managed: false,
             authProfileID: (selectedProfileID ?? "").isEmpty ? nil : selectedProfileID,
-            autoMount: autoMount
+            autoMount: autoMount,
+            hideFromFinder: hideFromFinder
         )
         
         do {
@@ -386,6 +395,7 @@ struct AddShareView: View {
             updatedShare.networkShare = networkShare
             updatedShare.mountPoint = mountPointName.isEmpty ? nil : mountPointName
             updatedShare.autoMount = autoMount
+            updatedShare.hideFromFinder = hideFromFinder
             updatedShare.authProfileID = selectedProfileID
             if !originalShare.managed {
                 updatedShare.authType = authType(forProfileID: selectedProfileID)
@@ -396,7 +406,9 @@ struct AddShareView: View {
 
             // Check if URL or mount point changed and share is currently mounted
             let locationChanged = oldShareURL != updatedShare.networkShare || oldMountPoint != updatedShare.effectiveMountPoint
-            let needsRemount = locationChanged && originalShare.mountStatus == .mounted
+            // MNT_DONTBROWSE is set at mount time, so a changed Finder visibility also needs a remount
+            let visibilityChanged = originalShare.hideFromFinder != updatedShare.hideFromFinder
+            let needsRemount = (locationChanged || visibilityChanged) && originalShare.mountStatus == .mounted
 
             // Unmount if necessary before updating
             if needsRemount {
