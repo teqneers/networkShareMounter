@@ -438,7 +438,7 @@ class Mounter: ObservableObject {
                     // Now let's check if there is some SHARE-1, SHARE-2, ... mount and unmount it
                     //
                     // Compare list of shares with mount
-                    for share in await self.shareManager.allShares {
+                    for share in await self.shareManager.allShares where share.localMountPoint == nil {
                         if let shareDirName = URL(string: share.networkShare) {
                             // Get the last component of the share, since this is the name of the mount-directory
                             if let shareMountDir = shareDirName.pathComponents.last {
@@ -480,8 +480,10 @@ class Mounter: ObservableObject {
     /// Unmounts a share at a given path
     ///
     /// - Parameter path: Path where the share is mounted
+    /// - Parameter keepDirectory: If true, the empty mount directory is not removed after unmounting
+    ///   (used for a share's `localMountPoint`, which is a directory chosen by the user)
     /// - Returns: Result indicating success or failure with error details
-    func unmountShare(atPath path: String, skipFinderRefresh: Bool = false) async -> Result<Void, MounterError> {
+    func unmountShare(atPath path: String, skipFinderRefresh: Bool = false, keepDirectory: Bool = false) async -> Result<Void, MounterError> {
         // Check if path is really a filesystem mount
         if fm.isDirectoryFilesystemMount(atPath: path) || path.hasPrefix("/Volumes") {
             Logger.mounter.info("Trying to unmount share at path \(path, privacy: .public)")
@@ -489,7 +491,9 @@ class Mounter: ObservableObject {
             let url = URL(fileURLWithPath: path)
             do {
                 try await fm.unmountVolume(at: url, options: [.allPartitionsAndEjectDisk, .withoutUI])
-                removeDirectory(atPath: url.path)
+                if !keepDirectory {
+                    removeDirectory(atPath: url.path)
+                }
                 
                 // Refresh Finder for specific unmounted path (use killall for unmount)
                 if !skipFinderRefresh {
@@ -522,7 +526,9 @@ class Mounter: ObservableObject {
                 }
                 removeSymlinkForWorkaround(share: share)
             }
-            let result = await unmountShare(atPath: pathToUnmount)
+            // Keep the user's own directory of a local mount point (not with the workaround, there it is a symlink)
+            let result = await unmountShare(atPath: pathToUnmount,
+                                            keepDirectory: share.localMountPoint != nil && !needsVolumesWorkaround)
             switch result {
             case .success:
                 Logger.mounter.info("💪 Successfully unmounted \(pathToUnmount, privacy: .public).")
@@ -575,7 +581,8 @@ class Mounter: ObservableObject {
                     }
                     removeSymlinkForWorkaround(share: share)
                 }
-                let result = await unmountShare(atPath: pathToUnmount, skipFinderRefresh: true)
+                let result = await unmountShare(atPath: pathToUnmount, skipFinderRefresh: true,
+                                                keepDirectory: share.localMountPoint != nil && !needsVolumesWorkaround)
                 switch result {
                 case .success:
                     Logger.mounter.info("💪 Successfully unmounted \(pathToUnmount, privacy: .public).")
@@ -636,6 +643,12 @@ class Mounter: ObservableObject {
         for share in await shareManager.allShares {
             // Calculate the actual full mount directory path for this share
             guard let shareURL = URL(string: share.networkShare) else {
+                continue
+            }
+
+            // Never clean up the parent of a local mount point: it is a directory of the user
+            // (e.g. ~/Projects for ~/Projects/docs), not a directory managed by NSM
+            if share.localMountPoint != nil {
                 continue
             }
 
@@ -1029,6 +1042,12 @@ class Mounter: ObservableObject {
         return share.effectiveUsername(from: profiles)
     }
 
+    /// Returns the share's `localMountPoint` with "~" and `%USERNAME%` resolved, or nil if not set.
+    private func resolvedLocalMountPath(for share: Share) async -> String? {
+        guard share.localMountPoint != nil else { return nil }
+        return share.resolvedLocalMountPoint(username: await effectiveUsernameForSubstitution(in: share))
+    }
+
     private func validateShareURL(_ share: Share) async throws -> (url: URL, host: String) {
         let username = await effectiveUsernameForSubstitution(in: share)
         let resolvedURLString = share.resolvedNetworkShare(username: username)
@@ -1083,9 +1102,16 @@ class Mounter: ObservableObject {
     ///   - share: The share to mount
     ///   - url: The validated URL of the share
     ///   - basePath: The base path where the share will be mounted
+    ///   - localMountPath: The resolved `localMountPoint` of the share, if set. It is used as is.
     /// - Returns: The full path where the share will be mounted
-    private func determineMountDirectory(forShare share: Share, url: URL, basePath: String) -> String {
+    private func determineMountDirectory(forShare share: Share, url: URL, basePath: String, localMountPath: String? = nil) -> String {
         Logger.mounter.debug("🤔 Determining mount directory: URL=\(url, privacy: .public), BasePath=\(basePath, privacy: .public)")
+
+        // A full local mount path replaces <basePath>/<mountPoint>
+        if let localMountPath = localMountPath {
+            Logger.mounter.debug("🗺️ Using local mount point: '\(localMountPath, privacy: .public)'")
+            return localMountPath
+        }
 
         // Use the explicit mountPoint name if set; otherwise derive from the resolved URL.
         // The resolved URL already has %USERNAME% substituted, so the mount directory
@@ -1111,9 +1137,11 @@ class Mounter: ObservableObject {
     /// - Parameters:
     ///   - directory: The directory path to check
     ///   - url: The share URL (for logging)
+    ///   - isLocalMountPoint: True if `directory` is the share's own `localMountPoint`. It is then
+    ///     never removed, `prepareLocalMountDirectory` checks it instead.
     /// - Returns: True if directory is already a mount point with the same share
     /// - Throws: MounterError if directory cannot be used
-    private func checkMountDirectory(_ directory: String, forURL url: URL) throws -> Bool {
+    private func checkMountDirectory(_ directory: String, forURL url: URL, isLocalMountPoint: Bool = false) throws -> Bool {
         if fm.isDirectory(atPath: directory) {
             // Check if the directory is already a mount point
             if fm.isDirectoryFilesystemMount(atPath: directory) {
@@ -1131,9 +1159,13 @@ class Mounter: ObservableObject {
                 Logger.mounter.info("ℹ️  \(url, privacy: .public): seems to be already mounted on \(directory, privacy: .public)")
                 return true
             } else {
-                if self.defaultMountPath == "/Volumes" || directory.hasPrefix("/Volumes/") {
+                // Mount directories under the default location /Volumes always start with "/Volumes/";
+                // a local mount point elsewhere is handled like any other directory outside /Volumes.
+                if directory.hasPrefix("/Volumes/") {
                     Logger.mounter.info("❗ Obstructing directory at \(directory, privacy: .public): can not mount share \(url, privacy: .public)")
                     throw MounterError.obstructingDirectory
+                } else if isLocalMountPoint {
+                    Logger.mounter.debug("📂 Keeping existing local mount point directory: \(directory, privacy: .public)")
                 } else {
                     let removed = removeDirectorySync(atPath: URL(fileURLWithPath: directory).path)
                     if removed {
@@ -1192,20 +1224,75 @@ class Mounter: ObservableObject {
         }
     }
     
+    /// Checks and, if needed, creates a share's local mount point directory
+    ///
+    /// The directory must be owned by the current user and must not contain visible files (it would
+    /// be hidden by the mount). A missing directory is created, including missing parents, only if
+    /// the nearest existing parent directory is owned by the current user. Directories owned by
+    /// someone else (e.g. root) can not be used as mount points by NetFS (EPERM/EEXIST).
+    ///
+    /// - Parameter path: The resolved local mount point
+    /// - Throws: `MounterError.permissionDenied` if the directory or its parent is not owned by the user,
+    ///   `MounterError.obstructingDirectory` if the directory is not empty or not a directory
+    private func prepareLocalMountDirectory(_ path: String) throws {
+        let userID = getuid()
+
+        func isOwnedByUser(_ path: String) -> Bool {
+            let owner = (try? fm.attributesOfItem(atPath: path)[.ownerAccountID] as? NSNumber)?.uint32Value
+            return owner == userID
+        }
+
+        var isDirectory: ObjCBool = false
+        if fm.fileExists(atPath: path, isDirectory: &isDirectory) {
+            guard isDirectory.boolValue, (try? fm.destinationOfSymbolicLink(atPath: path)) == nil else {
+                Logger.mounter.warning("❗ Local mount point \(path, privacy: .public) exists but is not a directory")
+                throw MounterError.obstructingDirectory
+            }
+            guard isOwnedByUser(path) else {
+                Logger.mounter.warning("❗ Local mount point \(path, privacy: .public) is not owned by the current user")
+                throw MounterError.permissionDenied
+            }
+            let visibleEntries = (try? fm.contentsOfDirectory(atPath: path))?.filter { !$0.hasPrefix(".") } ?? []
+            guard visibleEntries.isEmpty else {
+                Logger.mounter.warning("❗ Local mount point \(path, privacy: .public) is not empty, not mounting over its content")
+                throw MounterError.obstructingDirectory
+            }
+            Logger.mounter.debug("📂 Local mount point exists: \(path, privacy: .public)")
+            return
+        }
+
+        // Find the nearest existing parent and make sure the user may create directories there
+        var parent = URL(fileURLWithPath: path).deletingLastPathComponent()
+        while !fm.fileExists(atPath: parent.path) && parent.path != "/" {
+            parent = parent.deletingLastPathComponent()
+        }
+        guard isOwnedByUser(parent.path) else {
+            Logger.mounter.warning("❗ Can not create local mount point \(path, privacy: .public): \(parent.path, privacy: .public) is not owned by the current user")
+            throw MounterError.permissionDenied
+        }
+        Logger.mounter.debug("📂 Creating local mount point: \(path, privacy: .public)")
+        try fm.createDirectory(atPath: path, withIntermediateDirectories: true)
+    }
+
     /// Prepares the mount point directory and options
     ///
     /// - Parameters:
     ///   - mountDirectory: The directory where the share will be mounted
     ///   - basePath: The base mounting path
     ///   - share: The share being mounted
+    ///   - isLocalMountPoint: True if `mountDirectory` is the share's own `localMountPoint`
     /// - Returns: A tuple containing the mount options, open options, and real mount point
     /// - Throws: Any error that occurs during directory creation
-    private func prepareMountOperation(mountDirectory: String, basePath: String, share: Share) async throws -> (mountOptions: CFMutableDictionary, openOptions: CFMutableDictionary, realMountPoint: String) {
+    private func prepareMountOperation(mountDirectory: String, basePath: String, share: Share, isLocalMountPoint: Bool = false) async throws -> (mountOptions: CFMutableDictionary, openOptions: CFMutableDictionary, realMountPoint: String) {
         var mountOptions = Defaults.mountOptions
         var openOptions = Defaults.openOptions
         var realMountPoint = mountDirectory
         
-        if basePath == "/Volumes" {
+        if isLocalMountPoint {
+            // A local mount point is a directory the user chose: it must be owned by the user,
+            // empty, and is created only where the user may create it. It is not hidden.
+            try prepareLocalMountDirectory(mountDirectory)
+        } else if basePath == "/Volumes" {
             mountOptions = Defaults.mountOptionsForSystemMountDir
             realMountPoint = basePath // For /Volumes, NetFS handles the final path component
             Logger.mounter.debug("📂 Using /Volumes base path, realMountPoint set to base: \(realMountPoint, privacy: .public)")
@@ -1399,12 +1486,17 @@ class Mounter: ObservableObject {
         // Apple confirmed this is a bug; remove this block once the fix ships.
         let effectiveMountPath = needsVolumesWorkaround ? "/Volumes" : mountPath
 
+        // A local mount point replaces <mountPath>/<mountPoint>. With the workaround the share is
+        // mounted in /Volumes and the local mount point becomes the symlink.
+        let localMountPath = await resolvedLocalMountPath(for: share)
+        let mountLocalMountPath = needsVolumesWorkaround ? nil : localMountPath
+
         // Determine the mount directory path
-        let mountDirectory = determineMountDirectory(forShare: share, url: url, basePath: effectiveMountPath)
+        let mountDirectory = determineMountDirectory(forShare: share, url: url, basePath: effectiveMountPath, localMountPath: mountLocalMountPath)
         Logger.mounter.debug("  Determined mount directory: \(mountDirectory, privacy: .public)")
         
         // Check if directory can be used as mount point
-        if try checkMountDirectory(mountDirectory, forURL: url) {
+        if try checkMountDirectory(mountDirectory, forURL: url, isLocalMountPoint: mountLocalMountPath != nil) {
             // EARLY EXIT: Share already mounted here
             // Normalize the path we store to avoid inconsistencies
             let canonicalPath = URL(fileURLWithPath: mountDirectory).standardizedFileURL.path
@@ -1413,7 +1505,7 @@ class Mounter: ObservableObject {
             // [WORKAROUND macOS 26.4] Ensure symlink exists and persist its path as the mount point.
             let persistedPath: String
             if needsVolumesWorkaround,
-               let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonicalPath) {
+               let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonicalPath, localMountPath: localMountPath) {
                 persistedPath = symlinkPath
             } else {
                 persistedPath = canonicalPath
@@ -1443,7 +1535,8 @@ class Mounter: ObservableObject {
         let (mountOptions, openOptions, realMountPoint) = try await prepareMountOperation(
             mountDirectory: mountDirectory,
             basePath: effectiveMountPath,
-            share: share
+            share: share,
+            isLocalMountPoint: mountLocalMountPath != nil
         )
         Logger.mounter.debug("  Prepared mount options. Real mount point target: \(realMountPoint, privacy: .public)")
         
@@ -1504,7 +1597,7 @@ class Mounter: ObservableObject {
         // [WORKAROUND macOS 26.4] Create symlink and return its path so actualMountPoint reflects the
         // user-visible location (correct menu name, correct Finder target).
         if needsVolumesWorkaround,
-           let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonicalFinal) {
+           let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonicalFinal, localMountPath: localMountPath) {
             Logger.mounter.debug("--- Finished mountShare successfully for: \(share.networkShare, privacy: .public) at \(symlinkPath, privacy: .public) --- ")
             return symlinkPath
         }
@@ -1529,14 +1622,16 @@ class Mounter: ObservableObject {
             guard let url = URL(string: share.networkShare) else { continue }
             // [WORKAROUND macOS 26.4] Check in /Volumes when workaround is active
             let effectiveBasePath = needsVolumesWorkaround ? "/Volumes" : defaultMountPath
-            let expectedMountDir = determineMountDirectory(forShare: share, url: url, basePath: effectiveBasePath)
+            let localMountPath = await resolvedLocalMountPath(for: share)
+            let expectedMountDir = determineMountDirectory(forShare: share, url: url, basePath: effectiveBasePath,
+                                                           localMountPath: needsVolumesWorkaround ? nil : localMountPath)
             let canonical = URL(fileURLWithPath: expectedMountDir).standardizedFileURL.path
 
             if fm.isDirectoryFilesystemMount(atPath: canonical) {
                 // [WORKAROUND macOS 26.4] Recreate symlink and use its path as the persisted mount point.
                 let persistedPath: String
                 if needsVolumesWorkaround,
-                   let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonical) {
+                   let symlinkPath = createSymlinkForWorkaround(share: share, actualMountPoint: canonical, localMountPath: localMountPath) {
                     persistedPath = symlinkPath
                 } else {
                     persistedPath = canonical
@@ -1630,8 +1725,11 @@ class Mounter: ObservableObject {
     }
 
     /// Returns the symlink path for the workaround, derived from the OS-assigned mount name (e.g. "myshare-1")
-    /// to handle same-name shares. Custom `mountPoint` takes priority.
-    private func workaroundSymlinkPath(for share: Share, actualMountPoint: String) -> String {
+    /// to handle same-name shares. Custom `mountPoint` takes priority, a `localMountPoint` is used as is.
+    private func workaroundSymlinkPath(for share: Share, actualMountPoint: String, localMountPath: String? = nil) -> String {
+        if let localMountPath = localMountPath {
+            return localMountPath
+        }
         let name: String
         if let custom = share.mountPoint, !custom.isEmpty {
             name = custom
@@ -1643,8 +1741,8 @@ class Mounter: ObservableObject {
 
     /// Creates a symlink in `defaultMountPath` pointing to the actual /Volumes mount.
     @discardableResult
-    private func createSymlinkForWorkaround(share: Share, actualMountPoint: String) -> String? {
-        let symlinkPath = workaroundSymlinkPath(for: share, actualMountPoint: actualMountPoint)
+    private func createSymlinkForWorkaround(share: Share, actualMountPoint: String, localMountPath: String? = nil) -> String? {
+        let symlinkPath = workaroundSymlinkPath(for: share, actualMountPoint: actualMountPoint, localMountPath: localMountPath)
         do {
             // Use destinationOfSymbolicLink (does NOT follow links) to detect existing symlinks
             if (try? fm.destinationOfSymbolicLink(atPath: symlinkPath)) != nil {
@@ -1665,7 +1763,8 @@ class Mounter: ObservableObject {
     /// Removes the workaround symlink for a share from `defaultMountPath`.
     private func removeSymlinkForWorkaround(share: Share) {
         guard let actual = share.actualMountPoint else { return }
-        let symlinkPath = workaroundSymlinkPath(for: share, actualMountPoint: actual)
+        // With a local mount point, the persisted actualMountPoint already is the symlink path
+        let symlinkPath = share.localMountPoint != nil ? actual : workaroundSymlinkPath(for: share, actualMountPoint: actual)
         guard (try? fm.destinationOfSymbolicLink(atPath: symlinkPath)) != nil else { return }
         do {
             try fm.removeItem(atPath: symlinkPath)

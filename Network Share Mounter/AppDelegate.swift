@@ -421,9 +421,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Check Full Disk Access on macOS 26+ when mount path is outside /Volumes.
             // promptIfNeeded is a no-op on macOS < 26 or when path is already under /Volumes.
+            // Local mount points of shares are never under /Volumes, so they count as well.
             if let mounter = self.mounter {
+                let localMountPoint = await mounter.shareManager.allShares.compactMap { $0.localMountPoint }.first
                 FullDiskAccessChecker.promptIfNeeded(
-                    forMountPath: mounter.defaultMountPath,
+                    forMountPath: localMountPoint ?? mounter.defaultMountPath,
                     onOpenSettings: {
                         self.waitingForFullDiskAccess = true
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
