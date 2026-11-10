@@ -204,6 +204,9 @@ enum PreferenceKeys: String, CaseIterable {
     
     /// Whether to mount the user's home share from the AD/OpenDirectory SMBHome attribute
     case mountSMBHome = "mountSMBHome"
+
+    /// Seconds between the regular checks that mount shares which are not mounted (default 300)
+    case mountTriggerInterval = "mountTriggerInterval"
     
     /// Authentication type for shares
     case authType = "authType"

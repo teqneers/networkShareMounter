@@ -117,6 +117,14 @@ struct PreferenceManager {
     func int(for prefKey: PreferenceKeys) -> Int {
         defaults.integer(forKey: prefKey.rawValue)
     }
+
+    /// Seconds between the regular mount checks from `mountTriggerInterval`, limited to
+    /// `Defaults.mountTriggerIntervalRange`. Falls back to `Defaults.mountTriggerTimer` if not set.
+    var mountTriggerInterval: Double {
+        let value = Double(int(for: .mountTriggerInterval))
+        guard value > 0 else { return Defaults.mountTriggerTimer }
+        return min(max(value, Defaults.mountTriggerIntervalRange.lowerBound), Defaults.mountTriggerIntervalRange.upperBound)
+    }
     
     /// Retrieves a date for the specified preference key
     /// - Parameter prefKey: The preference key to look up

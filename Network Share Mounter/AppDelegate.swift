@@ -81,7 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let monitor = Monitor.shared
     
     /// Timer for scheduling periodic mount operations.
-    /// Triggers mount attempts at regular intervals defined by `Defaults.mountTriggerTimer`.
+    /// Triggers mount attempts at regular intervals defined by the `mountTriggerInterval` preference.
     var mountTimer = Timer()
     
     /// Timer for scheduling periodic authentication operations.
@@ -329,6 +329,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// (Re)starts the mount timer with the interval from the `mountTriggerInterval` preference.
+    /// Called at startup and when the interval is changed in Settings.
+    func scheduleMountTimer() {
+        mountTimer.invalidate()
+        let interval = prefs.mountTriggerInterval
+        mountTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true, block: { _ in
+            Logger.app.debug("Passed \(interval, privacy: .public) seconds, performing operartions:")
+            NotificationCenter.default.post(name: Defaults.nsmTimeTriggerNotification, object: nil)
+        })
+        Logger.app.info("⏱️ Mount timer scheduled every \(interval, privacy: .public) seconds")
+    }
+
     /// Migrates the old Sparkle enable preference to the new disable preference if necessary.
     /// The new key `.disableAutoUpdateFramework` takes precedence.
     private func migrateSparklePreference() {
@@ -552,10 +564,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             UserDefaults.standard.removeObject(forKey: "lastKrbAuthAttempt")
 
-            self.mountTimer = Timer.scheduledTimer(withTimeInterval: Defaults.mountTriggerTimer, repeats: true, block: { _ in
-                Logger.app.debug("Passed \(Defaults.mountTriggerTimer, privacy: .public) seconds, performing operartions:")
-                NotificationCenter.default.post(name: Defaults.nsmTimeTriggerNotification, object: nil)
-            })
+            self.scheduleMountTimer()
 
             self.authTimer = Timer.scheduledTimer(withTimeInterval: Defaults.authTriggerTimer, repeats: true, block: { _ in
                 Logger.app.debug("Passed \(Defaults.authTriggerTimer, privacy: .public) seconds, performing operartions:")

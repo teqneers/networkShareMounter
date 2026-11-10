@@ -33,6 +33,10 @@ class ActivityController {
     /// Flag to prevent double authentication triggers during app startup
     private var isInStartupPhase = true
 
+    /// Time of the last authentication trigger sent by the mount timer. Keeps authentication on the
+    /// default 5-minute rhythm when `mountTriggerInterval` checks mounts more often.
+    private var lastTimerAuthTrigger: Date = .distantPast
+
     /// Task for debouncing network change operations
     private var networkChangeTask: Task<Void, Never>?
 
@@ -596,7 +600,8 @@ class ActivityController {
     @objc func timeGoesBySoSlowly() {
         let lastActivity = UserDefaults.standard.object(forKey: "lastActivityTimestamp") as? Date ?? Date()
         let timeSinceLastActivity = Date().timeIntervalSince(lastActivity)
-        let threshold = Defaults.mountTriggerTimer * 2
+        // A shorter mount interval must not turn normal timer delays into "long inactivity"
+        let threshold = max(prefs.mountTriggerInterval, Defaults.mountTriggerTimer) * 2
 
         if timeSinceLastActivity > threshold {
             Logger.activityController.warning("⚠️ Detected long inactivity (\(timeSinceLastActivity, privacy: .public)s > \(threshold, privacy: .public)s) - performing soft restart")
@@ -614,7 +619,11 @@ class ActivityController {
         }
 
         if !isInStartupPhase {
-            NotificationCenter.default.post(name: Defaults.nsmAuthTriggerNotification, object: nil)
+            // Allow 5 seconds of timer tolerance, so a 60-second interval triggers on every 5th tick
+            if Date().timeIntervalSince(lastTimerAuthTrigger) >= Defaults.mountTriggerTimer - 5 {
+                lastTimerAuthTrigger = Date()
+                NotificationCenter.default.post(name: Defaults.nsmAuthTriggerNotification, object: nil)
+            }
         } else {
             Logger.activityController.debug("⏰ Skipping auth trigger during startup phase to prevent double authentication")
         }

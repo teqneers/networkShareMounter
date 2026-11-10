@@ -57,6 +57,9 @@ struct Defaults {
     
     /// Time interval for triggering mount operations (5 minutes)
     static let mountTriggerTimer: Double = 5.0 * 60
+
+    /// Allowed range for the `mountTriggerInterval` preference in seconds (1 minute to 1 hour)
+    static let mountTriggerIntervalRange: ClosedRange<Double> = 60...3600
     
     /// Time interval for triggering authentication operations (30 minutes)
     static let authTriggerTimer: Double = 30.0 * 60
