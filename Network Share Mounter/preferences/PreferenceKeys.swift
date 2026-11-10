@@ -205,6 +205,9 @@ enum PreferenceKeys: String, CaseIterable {
     /// Whether to mount the user's home share from the AD/OpenDirectory SMBHome attribute
     case mountSMBHome = "mountSMBHome"
     
+    /// Whether to ask for Full Disk Access at startup when shares are mounted outside /Volumes (macOS 26+)
+    case checkFullDiskAccess = "checkFullDiskAccess"
+    
     /// Authentication type for shares
     case authType = "authType"
     

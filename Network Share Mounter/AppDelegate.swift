@@ -421,7 +421,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Check Full Disk Access on macOS 26+ when mount path is outside /Volumes.
             // promptIfNeeded is a no-op on macOS < 26 or when path is already under /Volumes.
-            if let mounter = self.mounter {
+            // Admins can turn the check off with checkFullDiskAccess = false, e.g. when access is
+            // granted by a PPPC profile or not needed on their macOS version.
+            if let mounter = self.mounter, prefs.bool(for: .checkFullDiskAccess, defaultValue: true) {
                 FullDiskAccessChecker.promptIfNeeded(
                     forMountPath: mounter.defaultMountPath,
                     onOpenSettings: {

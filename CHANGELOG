@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### What's new
+- The new MDM key `checkFullDiskAccess` controls whether the app asks for Full Disk Access at startup. Set it
+  to `false` when Full Disk Access is granted with a PPPC profile or is not needed for the mount location in
+  use. Without the key the app asks as before
+
 ### Fixed
 - While the "Full Disk Access Required" message was open, no share was connected. Shares are now connected
   while the message is shown

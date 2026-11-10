@@ -105,6 +105,12 @@
                 }
             }
         },
+        "checkFullDiskAccess": {
+            "title": "Ask for Full Disk Access",
+            "description": "If true (default), the app asks the user at startup to grant Full Disk Access when shares are mounted outside /Volumes on macOS 26 or later. Set to false to never ask, e.g. when Full Disk Access is granted with a PPPC profile or is not needed for the mount location in use.",
+            "type": "boolean",
+            "default": true
+        },
         "mountSMBHome": {
             "title": "Mount AD home share",
             "description": "If false, the user's home share from the Active Directory/OpenDirectory SMBHome attribute is not mounted. Only relevant on Macs bound to Active Directory. If the key is missing, the home share is mounted (default: true).",
