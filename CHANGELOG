@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- While the "Full Disk Access Required" message was open, no share was connected. Shares are now connected
+  while the message is shown
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new
