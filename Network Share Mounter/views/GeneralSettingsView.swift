@@ -55,6 +55,24 @@ struct GeneralSettingsView: View {
     /// mind after the first-run dialog. Sparkle reads the same key from UserDefaults.
     @AppStorage("SUEnableAutomaticChecks") private var automaticallyChecksForUpdates: Bool = true
 
+    /// Seconds between the regular mount checks (`mountTriggerInterval`).
+    /// Initialized in `.onAppear`, changes are saved and applied to the mount timer in `.onChange`.
+    @State private var mountTriggerInterval: Int = Int(Defaults.mountTriggerTimer)
+
+    /// Intervals offered in the picker, in seconds
+    private static let mountTriggerIntervalChoices = [60, 120, 300, 600, 900, 1800, 3600]
+
+    /// Picker choices, including a value set by MDM that is not in the list
+    private var mountTriggerIntervalOptions: [Int] {
+        let choices = Self.mountTriggerIntervalChoices
+        return choices.contains(mountTriggerInterval) ? choices : (choices + [mountTriggerInterval]).sorted()
+    }
+
+    /// True if `mountTriggerInterval` is set by MDM, the picker is then disabled
+    private var isMountTriggerIntervalForced: Bool {
+        UserDefaults.standard.objectIsForced(forKey: PreferenceKeys.mountTriggerInterval.rawValue)
+    }
+
     /// Hidden debug feature: enables log export functionality for current session only
     @State private var debugLogExportEnabled: Bool = false
 
@@ -155,7 +173,29 @@ struct GeneralSettingsView: View {
                 }
                 .padding(.top, 8)
                 .padding(.bottom, 8)
-                
+
+                // MARK: - Mounting Section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Mounting")
+                        .font(.headline)
+                    Picker("Mount missing shares every", selection: $mountTriggerInterval) {
+                        ForEach(mountTriggerIntervalOptions, id: \.self) { seconds in
+                            if seconds % 60 == 0 {
+                                Text("\(seconds / 60) min").tag(seconds)
+                            } else {
+                                Text("\(seconds) s").tag(seconds)
+                            }
+                        }
+                    }
+                    .fixedSize()
+                    .disabled(isMountTriggerIntervalForced)
+                    Text("Shares that got disconnected, e.g. after sleep or a network change, are connected again. Shares you disconnect in the menu stay disconnected.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 8)
+
                 // MARK: - Diagnostic Data Section
                 if !isDiagnosticsSectionDisabled {
                     VStack(alignment: .leading, spacing: 8) {
@@ -358,6 +398,7 @@ struct GeneralSettingsView: View {
             Logger.app.info("⚙️ [GeneralSettingsView] onAppear – canChangeAutostart=\(canChange, privacy: .public), mdmAutostart=\(mdmAutostart, privacy: .public), systemStatus=\(String(describing: systemStatus), privacy: .public), startAtLogin=\(startAtLogin, privacy: .public)")
 
             sendDiagnosticData = prefs.bool(for: .sendDiagnostics)
+            mountTriggerInterval = Int(prefs.mountTriggerInterval)
         }
         // MARK: - State Change Handlers
         .onChange(of: startAtLogin) { newValue in
@@ -382,6 +423,12 @@ struct GeneralSettingsView: View {
                     startAtLogin = (service.status == .enabled)
                 }
             }
+        }
+        .onChange(of: mountTriggerInterval) { newValue in
+            // Ignore the initial value set in onAppear, so the default is not written to the user's settings
+            guard !isMountTriggerIntervalForced, Double(newValue) != prefs.mountTriggerInterval else { return }
+            prefs.set(for: .mountTriggerInterval, value: newValue)
+            (NSApp.delegate as? AppDelegate)?.scheduleMountTimer()
         }
         .onChange(of: sendDiagnosticData) { newValue in
             // Persist the diagnostic data preference.
