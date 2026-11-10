@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### What's new
+- Shares that got disconnected, e.g. after sleep or a network change, were connected again only every
+  5 minutes. The interval can now be set in Settings > General > "Mount missing shares every" (1 to 60
+  minutes), or with the new MDM key `mountTriggerInterval` in seconds. Authentication is still refreshed every
+  5 minutes at most. Without the key the interval stays 5 minutes
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new
