@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- When quitting the app with `unmountOnExit` (the default), only the first share was disconnected, the others
+  stayed connected. All shares are now disconnected before the app quits. Quitting waits at most 10 seconds,
+  so a server that does not respond does not hold up logout or shutdown
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new

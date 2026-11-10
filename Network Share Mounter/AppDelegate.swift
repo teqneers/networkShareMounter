@@ -138,6 +138,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Cleared when `applicationDidBecomeActive` fires so the app can retry mounts after FDA is granted.
     var waitingForFullDiskAccess: Bool = false
 
+    /// Set once quitting may continue after shares were unmounted (see applicationShouldTerminate)
+    private var terminationReplySent = false
+
     /// The pending background update found by Sparkle; nil when no update is waiting.
     /// Used for gentle reminders: instead of stealing focus, a menu item is shown.
     var pendingUpdateItem: SUAppcastItem?
@@ -661,14 +664,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Unmounts all shares before quitting if `unmountOnExit` is set.
+    ///
+    /// The unmount runs asynchronously and needs the main actor between its steps, so quitting is
+    /// delayed (`.terminateLater`) until all shares are unmounted instead of blocking the main thread.
+    /// Quitting is never delayed for more than 10 seconds, e.g. at logout with an unreachable server.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard prefs.bool(for: .unmountOnExit) == true, let mounter = mounter else {
+            return .terminateNow
+        }
+        Logger.app.debug("Exiting app, unmounting shares...")
+        terminationReplySent = false
+        Task { @MainActor in
+            await mounter.unmountAllMountedShares(userTriggered: true)
+            Logger.app.debug("All shares unmounted, quitting")
+            self.replyToTermination(sender)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            if !self.terminationReplySent {
+                Logger.app.warning("⚠️ Unmounting shares took more than 10 seconds, quitting anyway")
+            }
+            self.replyToTermination(sender)
+        }
+        return .terminateLater
+    }
+
+    /// Lets a delayed termination continue, only once
+    private func replyToTermination(_ sender: NSApplication) {
+        guard !terminationReplySent else { return }
+        terminationReplySent = true
+        sender.reply(toApplicationShouldTerminate: true)
+    }
+
     func applicationWillTerminate(_ aNotification: Notification) {
         monitor.monitor.cancel()
-        
-        if prefs.bool(for: .unmountOnExit) == true {
-            Logger.app.debug("Exiting app, unmounting shares...")
-            unmountShares(self)
-            sleep(3)
-        }
     }
     
     @objc func handleErrorNotification(_ notification: NSNotification) {
