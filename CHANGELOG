@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- A share that was ejected in Finder or disconnected outside the app was not connected again until the next
+  network change or wake from sleep, because the app still considered it connected. It is now connected
+  again at the next regular check. Shares disconnected in the app's menu stay disconnected
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new

@@ -1431,6 +1431,18 @@ class Mounter: ObservableObject {
         }
         Logger.mounter.debug("  Mount directory check passed (not already mounted here)")
         
+        // A share can be unmounted outside of the app, e.g. ejected in Finder. Its actualMountPoint is then
+        // stale and checkMountingCondition would skip it as "already mounted" until the next network change.
+        var share = share
+        if let staleMountPoint = share.actualMountPoint,
+           !fm.isDirectoryFilesystemMount(atPath: URL(fileURLWithPath: staleMountPoint).resolvingSymlinksInPath().path) {
+            Logger.mounter.info("🔄 Share \(url, privacy: .public) is no longer mounted at \(staleMountPoint, privacy: .public), mounting it again")
+            await updateShare(actualMountPoint: nil, for: share)
+            await updateShare(mountStatus: .unmounted, for: share)
+            share.actualMountPoint = nil
+            share.mountStatus = .unmounted
+        }
+
         // Check if mounting should be attempted based on current status (unless user triggered)
         try checkMountingCondition(forShare: share, url: url, userTriggered: userTriggered, networkTriggered: networkTriggered)
         Logger.mounter.debug("  Mounting condition check passed")
