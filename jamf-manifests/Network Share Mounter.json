@@ -105,6 +105,12 @@
                 }
             }
         },
+        "restartFinderOnUnmount": {
+            "title": "Restart Finder after unmount",
+            "description": "If true (default), Finder is restarted (killall Finder) after shares are unmounted, so that unmounted shares reliably disappear from Finder. This closes all Finder windows and cancels running Finder copy operations. If false, Finder is only refreshed, like after mounting.",
+            "type": "boolean",
+            "default": true
+        },
         "mountSMBHome": {
             "title": "Mount AD home share",
             "description": "If false, the user's home share from the Active Directory/OpenDirectory SMBHome attribute is not mounted. Only relevant on Macs bound to Active Directory. If the key is missing, the home share is mounted (default: true).",

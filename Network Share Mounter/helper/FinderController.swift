@@ -30,15 +30,18 @@ actor FinderController {
             return
         }
         
-        if forceRestart || isUnmountOperation {
+        // Restarting Finder closes its windows and cancels running Finder copy operations, so it
+        // can be turned off for unmount operations with restartFinderOnUnmount = false
+        let restartOnUnmount = isUnmountOperation && PreferenceManager().bool(for: .restartFinderOnUnmount, defaultValue: true)
+        if forceRestart || restartOnUnmount {
             let reason = forceRestart ? "force restart requested" : "unmount operation"
             Logger.finderController.info("🎯 Using killall Finder - reason: \(reason)")
             await nuclearFinderRestart()
             return
         }
         
-        // For mount operations and local paths, use native methods
-        Logger.finderController.debug("🔄 Using native refresh methods for mount operation")
+        // For mount operations, local paths and unmount operations without Finder restart, use native methods
+        Logger.finderController.debug("🔄 Using native refresh methods for \(isUnmountOperation ? "unmount" : "mount", privacy: .public) operation")
         await refreshFinderView(forPaths: mountPaths)
         Logger.finderController.info("✅ Native Finder refresh completed")
     }

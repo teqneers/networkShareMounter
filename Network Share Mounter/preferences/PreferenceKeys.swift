@@ -205,6 +205,9 @@ enum PreferenceKeys: String, CaseIterable {
     /// Whether to mount the user's home share from the AD/OpenDirectory SMBHome attribute
     case mountSMBHome = "mountSMBHome"
     
+    /// Whether Finder is restarted (killall Finder) after unmounting shares, or only refreshed gently
+    case restartFinderOnUnmount = "restartFinderOnUnmount"
+    
     /// Authentication type for shares
     case authType = "authType"
     
