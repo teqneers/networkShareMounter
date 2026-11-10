@@ -72,7 +72,14 @@ actor FinderController {
         
         // Method 1: FSEvents-based notifications (more reliable)
         for mountPath in pathsToRefresh {
-            await triggerFSEventForPath(mountPath)
+            // Never write the temp file into a network volume: on a freshly mounted share this is
+            // network I/O that can take minutes (and blocks the next mount), leaves traces on the
+            // server and fails on read-only shares. The parent directory below is local.
+            if FileManager.default.isOnNetworkVolume(atPath: mountPath) {
+                Logger.finderController.debug("ℹ️ Skipping FSEvent temp file on network volume \(mountPath, privacy: .public)")
+            } else {
+                await triggerFSEventForPath(mountPath)
+            }
             
             // Also trigger for parent directories
             let parentPath = URL(fileURLWithPath: mountPath).deletingLastPathComponent().path

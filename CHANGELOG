@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- After connecting a share, the app could wait from several seconds up to minutes before connecting the next
+  share. To refresh Finder it wrote and deleted a temporary file inside the connected share, which is slow
+  over the network, leaves traces on the server and fails on read-only shares. It now only does this in the
+  local folder that contains the share
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new
