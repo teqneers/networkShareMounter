@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- When adding a share without any profile set up, the "Authentication" section of the dialog showed
+  "Loading profiles…" forever. Profiles are loaded when the app starts, so the section now always shows the
+  profile list, with "No Profile (System Default)" when there is none
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new

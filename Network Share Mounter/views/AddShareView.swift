@@ -183,61 +183,49 @@ struct AddShareView: View {
     @ViewBuilder
     private var authenticationSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if profileManager.profiles.isEmpty && !isEditing {
-                // Loading state
-                HStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Loading profiles…")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 20)
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Associated Profile")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Associated Profile")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                Picker("Select Profile", selection: $selectedProfileID) {
+                    // Add "None" option
+                    Label("No Profile (System Default)", systemImage: "gear")
+                        .tag(String?.none)
                     
-                    Picker("Select Profile", selection: $selectedProfileID) {
-                        // Add "None" option
-                        Label("No Profile (System Default)", systemImage: "gear")
-                            .tag(String?.none)
+                    if !profileManager.profiles.isEmpty {
+                        Divider()
                         
-                        if !profileManager.profiles.isEmpty {
-                            Divider()
-                            
-                            // List available profiles
-                            ForEach(profileManager.profiles) { profile in
-                                Label {
-                                    Text(profile.displayName)
-                                } icon: {
-                                    Image(systemName: profile.symbolName ?? "person.circle")
-                                        .foregroundColor(.white)
-                                        .font(.caption)
-                                        .frame(width: 16, height: 16)
-                                        .background(
-                                            Circle()
-                                                .fill(profile.symbolColor)
-                                        )
-                                }
-                                .tag(profile.id as String?)
+                        // List available profiles
+                        ForEach(profileManager.profiles) { profile in
+                            Label {
+                                Text(profile.displayName)
+                            } icon: {
+                                Image(systemName: profile.symbolName ?? "person.circle")
+                                    .foregroundColor(.white)
+                                    .font(.caption)
+                                    .frame(width: 16, height: 16)
+                                    .background(
+                                        Circle()
+                                            .fill(profile.symbolColor)
+                                    )
                             }
+                            .tag(profile.id as String?)
                         }
                     }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Help text
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Choose an authentication profile for this share.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
-                    // Help text
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Choose an authentication profile for this share.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text("Without a profile, system defaults (e.g., Kerberos) will be used.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Without a profile, system defaults (e.g., Kerberos) will be used.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
         }
