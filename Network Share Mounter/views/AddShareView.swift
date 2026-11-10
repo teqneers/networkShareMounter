@@ -166,13 +166,18 @@ struct AddShareView: View {
                 Text("Mount Path:")
                     .frame(width: 100, alignment: .trailing)
                 VStack(alignment: .leading, spacing: 4) {
-                    TextField("Optional, e.g. ~/Shares/docs", text: $localMountPoint)
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
-                        .disabled(isEditing && (existingShare?.managed == true))
-                        .onChange(of: localMountPoint) { newValue in
-                            validateLocalMountPoint(newValue)
+                    HStack {
+                        TextField("Optional, e.g. ~/Shares/docs", text: $localMountPoint)
+                            .textFieldStyle(.roundedBorder)
+                            .autocorrectionDisabled()
+                            .onChange(of: localMountPoint) { newValue in
+                                validateLocalMountPoint(newValue)
+                            }
+                        Button("Choose…") {
+                            chooseLocalMountPoint()
                         }
+                    }
+                    .disabled(isEditing && (existingShare?.managed == true))
 
                     if let error = localMountPointError {
                         Text(error)
@@ -327,6 +332,22 @@ struct AddShareView: View {
             localMountPointError = nil
         } else {
             localMountPointError = String(localized: "⚠️ Use a full path like ~/Shares/docs, not in /Volumes")
+        }
+    }
+
+    /// Lets the user pick or create the mount path folder. Paths in the home folder are shown as ~/...
+    private func chooseLocalMountPoint() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = String(localized: "Choose")
+        panel.message = String(localized: "Choose an empty folder where the share is mounted")
+        if panel.runModal() == .OK, let url = panel.url {
+            let home = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.path
+            let path = url.standardizedFileURL.path
+            localMountPoint = path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
         }
     }
 
