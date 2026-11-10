@@ -22,6 +22,11 @@ actor ShareManager {
     private var prefs = PreferenceManager()
     /// URL of the share added from the user's SMBHome attribute, if any
     private var smbHomeShareURL: String?
+    /// True while the "unassigned profiles" warning is shown, so it can be cleared once no share needs a profile anymore
+    private var unassignedProfilesWarningShown = false
+    /// URLs of shares that were mounted without a profile while the app runs. macOS found the credentials
+    /// itself (e.g. a password saved in the keychain by Finder), so they do not need a profile.
+    private var sharesMountedWithoutProfile: Set<String> = []
 
     /// Add a share
     func addShare(_ share: Share) {
@@ -157,9 +162,14 @@ actor ShareManager {
     }
 
     /// Checks for shares without assigned profiles and sends notification if any are found.
-    /// When `notifyWhenAllAssigned` is true, also posts a notification if all profiles are assigned
-    /// (used after UI profile creation to clear stale menu warnings).
+    /// Shares that were mounted without a profile are not counted, also after they are unmounted:
+    /// macOS could authenticate them itself, e.g. with a password saved in the keychain by Finder.
+    /// When `notifyWhenAllAssigned` is true, or a warning was shown before, also posts a notification
+    /// if all profiles are assigned (used after UI profile creation and after mounting to clear stale menu warnings).
     func checkForUnassignedProfiles(notifyWhenAllAssigned: Bool = false) {
+        for share in _shares where share.mountStatus == .mounted && share.authProfileID == nil {
+            sharesMountedWithoutProfile.insert(share.networkShare)
+        }
         let unassignedShares = _shares.filter { share in
             // Skip shares whose Kerberos is managed externally — they have a pseudo-profile
             guard !share.externalKerberosManagement else { return false }
@@ -167,6 +177,8 @@ actor ShareManager {
             // Also catch shares with stale authProfileIDs that were already detected as unassigned
             // during a previous mount attempt (mountStatus == .unassignedProfile).
             guard share.authType == .krb || share.authType == .pwd else { return false }
+            // A share that mounted without a profile does not need one, macOS found the credentials itself
+            guard share.mountStatus == .unassignedProfile || !sharesMountedWithoutProfile.contains(share.networkShare) else { return false }
             return share.authProfileID == nil || share.mountStatus == .unassignedProfile
         }
 
@@ -175,9 +187,11 @@ actor ShareManager {
             for share in unassignedShares {
                 Logger.shareManager.debug("   - \(share.networkShare, privacy: .public)")
             }
+            unassignedProfilesWarningShown = true
             notifyUnassignedProfilesDetected()
-        } else if notifyWhenAllAssigned {
+        } else if notifyWhenAllAssigned || unassignedProfilesWarningShown {
             Logger.shareManager.info("✅ All shares have assigned profiles")
+            unassignedProfilesWarningShown = false
             notifyAllProfilesAssigned()
         }
     }

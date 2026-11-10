@@ -816,6 +816,9 @@ class Mounter: ObservableObject {
 
         await clearKerberosErrorIfResolved()
 
+        // Shares that mounted without a profile no longer need the "Profile assignment required" warning
+        await shareManager.checkForUnassignedProfiles()
+
         // Log final mount status for all shares
         Logger.mounter.info("📊 Sequential mount process finished. Final mount status summary:")
         for share in await shareManager.allShares {

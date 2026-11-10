@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- The menu showed "Profile assignment required" for shares that were connected without a profile, e.g. with
+  a password that Finder saved in the keychain. Connected shares no longer count, and the message goes away
+  once no share needs a profile anymore
+
 ## [4.1.7] - 2026-10-29
 
 ### What's new

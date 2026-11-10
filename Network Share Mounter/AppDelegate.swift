@@ -771,6 +771,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         else if notification.userInfo?["AllProfilesAssigned"] != nil {
             Task { @MainActor in
+                // Only clear the profile warning, keep other errors (e.g. a failed mount) visible
+                guard self.mounter?.errorStatus == .unassignedProfile else {
+                    await self.constructMenu(withMounter: self.mounter)
+                    return
+                }
                 self.mounter?.setErrorStatus(.noError)
                 if let button = self.statusItem.button {
                     button.image = NSImage(named: NSImage.Name(MenuImageName.normal.imageName))
